@@ -105,7 +105,7 @@ public class HomeAwaySequencer
             if (oddNumTeams && count == 0)
               {
                 int team =
-                    findTeamWithGame(2, teams, generator, numTeams,
+                    findTeamWithGame2(2, teams, generator, numTeams,
                                      toBeScheduled);
                 toBeScheduled.remove(toBeScheduled.indexOf(team));
                 sequences[i][team] = 'B';
@@ -115,11 +115,11 @@ public class HomeAwaySequencer
             else
               {
                 int team1 =
-                    findTeamWithGame(0, teams, generator, numTeams,
+                    findTeamWithGame2(0, teams, generator, numTeams,
                                      toBeScheduled);
                 toBeScheduled.remove(toBeScheduled.indexOf(team1));
                 int team2 =
-                    findTeamWithGame(1, teams, generator, numTeams,
+                    findTeamWithGame2(1, teams, generator, numTeams,
                                      toBeScheduled);
                 toBeScheduled.remove(toBeScheduled.indexOf(team2));
 
@@ -164,5 +164,20 @@ public class HomeAwaySequencer
 
     return index;
   }//findTeamWithGame(int, ArrayList<Integer[]>, Random, int)
+
+  public static int findTeamWithGame2(int type, ArrayList<Integer[]> teams,
+                                      Random gen, int numTeams,
+                                      ArrayList<Integer> toBeScheduled)
+  {
+    ArrayList<Integer> possible = new ArrayList<Integer>();
+    for (int i = 0; i < numTeams; i++)
+      {
+        if (teams.get(i)[type] > 0 && toBeScheduled.contains(i))
+          {
+            possible.add(i);
+          }
+      }
+    return possible.get(gen.nextInt(possible.size()));
+  }
 
 }
