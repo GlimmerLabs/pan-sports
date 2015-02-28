@@ -107,6 +107,8 @@ public class HomeAwayGenerator
       {
         System.out.println(i);
       }
+    
+    System.out.println(results.size());
   }
 
 }
