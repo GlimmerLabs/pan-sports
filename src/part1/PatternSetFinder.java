@@ -17,10 +17,13 @@ public class PatternSetFinder
     double[][] a = new double[size][patternLength];
     double[] b = new double[size];
     double[] coeff = new double[size];
+    
+    ArrayList<Integer> restrictedRows = new ArrayList<Integer>();
 
     for (int i = 0; i < size; i++)
       {
-        if(patterns.get(i).substring(0, 2) == "AA"){
+        if(patterns.get(i).substring(0, 2).equals("AA") || patterns.get(i).substring(0, 3).equals("BAA")
+            ||patterns.get(i).substring(16, 18).equals("AA")){
           b[i] = 1;
         }
         else{
@@ -56,46 +59,61 @@ public class PatternSetFinder
         GRBEnv env = new GRBEnv("schedule.log");
         GRBModel model = new GRBModel(env);
         
-        GRBVar[] x = new GRBVar[size];
-        for(int i = 0; i < size; i++){
-          x[i] = model.addVar(0.0, 1.0, 0.0, GRB.BINARY, "x" + i);
-        }
-        
-        model.update();
-        
-        GRBLinExpr expr = new GRBLinExpr();
-        expr.addTerms(b, x);
-        model.setObjective(expr, GRB.MINIMIZE);
-        
-        double[] homeConstraintCoeff = new double[size];
-        double[] awayConstraintCoeff = new double[size];
-
-        for(int i = 0; i < patternLength; i++){
-          GRBLinExpr homeExpr = new GRBLinExpr();
-          GRBLinExpr awayExpr = new GRBLinExpr();
-          
-          for(int j = 0; j < size; j++){
-            homeConstraintCoeff[j] = h[j][i];
-            awayConstraintCoeff[j] = a[j][i];
+        int count = 0;
+        double objective = 0;
+        while(objective < 1){
+          for(Integer j : restrictedRows){
+            b[j]++;
           }
           
-          homeExpr.addTerms(homeConstraintCoeff, x);
-          awayExpr.addTerms(awayConstraintCoeff, x);
+          GRBVar[] x = new GRBVar[size];
+          for(int i = 0; i < size; i++){
+            x[i] = model.addVar(0.0, 1.0, 0.0, GRB.BINARY, "x" + i);
+          }
+        
+          model.update();
+        
+          GRBLinExpr expr = new GRBLinExpr();
+          expr.addTerms(b, x);
+          model.setObjective(expr, GRB.MINIMIZE);
+        
+          double[] homeConstraintCoeff = new double[size];
+          double[] awayConstraintCoeff = new double[size];
+
+          for(int i = 0; i < patternLength; i++){
+            GRBLinExpr homeExpr = new GRBLinExpr();
+            GRBLinExpr awayExpr = new GRBLinExpr();
           
-          model.addConstr(homeExpr, GRB.EQUAL, 4, "homeC" + i);
-          model.addConstr(awayExpr, GRB.EQUAL, 4, "awayC" + i);
+            for(int j = 0; j < size; j++){
+              homeConstraintCoeff[j] = h[j][i];
+              awayConstraintCoeff[j] = a[j][i];
+            }
+          
+            homeExpr.addTerms(homeConstraintCoeff, x);
+            awayExpr.addTerms(awayConstraintCoeff, x);
+          
+            model.addConstr(homeExpr, GRB.EQUAL, 4, "homeC" + i);
+            model.addConstr(awayExpr, GRB.EQUAL, 4, "awayC" + i);
+          }
+        
+          GRBLinExpr numTeamsConstraint = new GRBLinExpr();
+          numTeamsConstraint.addTerms(coeff, x);
+          model.addConstr(numTeamsConstraint, GRB.EQUAL, 9, "numTeamsC");
+          
+          model.optimize();
+          for(int i = 0; i < size; i++){
+            int[] used = new int[9];
+            int index = 0;
+            if(x[i].get(GRB.DoubleAttr.X) == 1.0){
+              System.out.println(patterns.get(i) + " " + i);
+              used[index++] = i;
+            }  
+            for(int j: used)
+              restrictedRows.add(j);
+          }
+          objective = model.get(GRB.DoubleAttr.ObjVal);
         }
         
-        GRBLinExpr numTeamsConstraint = new GRBLinExpr();
-        numTeamsConstraint.addTerms(coeff, x);
-        model.addConstr(numTeamsConstraint, GRB.EQUAL, 9, "numTeamsC");
-        
-        model.optimize();
-        
-        for(int i = 0; i < size; i++){
-          if(x[i].get(GRB.DoubleAttr.X) == 1.0)
-            System.out.println(patterns.get(i));
-        }
         model.dispose();
         env.dispose();
         
