@@ -12,8 +12,8 @@ public class HomeAwayGenerator
    * desirable permutations of them. Returns them in an arraylist. Core permutation algorithm
    * is adapted from a python algorithm discussed at 
    * http://stackoverflow.com/questions/18227931/iterative-solution-for-finding-string-permutations
-   * @param str
-   * @return
+   * @param str: For a 9 game season, use "HHHHBAAAA"
+   * @return The permutations of str 
    */
   public static ArrayList<String> makePatterns(String str)
   {
