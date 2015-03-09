@@ -71,7 +71,7 @@ public class PatternSetFinder
       GRBEnv env = new GRBEnv("schedule.log");
       GRBModel model = new GRBModel(env);
       model.getEnv().set(GRB.IntParam.OutputFlag, 0);
-      int count = 0;
+
       double objective = 0;
       while(objective < 1){
         for(Integer j : restrictedRows)
@@ -151,10 +151,15 @@ public class PatternSetFinder
     ArrayList<String> patterns = HomeAwayGenerator.makePatterns("HHHHBAAAA");
     ArrayList<Integer[]> patternSets = findPatternSet(patterns);
     long endTime = System.currentTimeMillis();
+    
+    for(int j = 0; j < patternSets.size(); j++){
+      System.out.println("Set " + j + ":");
+      for(int i = 0; i < patternSets.get(j).length; i++){
+        System.out.println(patterns.get(patternSets.get(j)[i]));
+      }
+      System.out.println();
+    }
     System.out.println("Found "+patternSets.size()+" pattern sets" + " in "+(endTime - startTime)+"ms");
-    /*
-    for(Integer[] set: patternSets)
-      System.out.println(Arrays.toString(set)); 
-      */
+
   }
 }
