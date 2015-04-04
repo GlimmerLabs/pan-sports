@@ -62,52 +62,65 @@ public class GLPKPatternSetFinder
           }
       }//for
       glp_prob lp;
-      glp_smcp parm;
-      SWIGTYPE_p_int ind;
-      SWIGTYPE_p_double val;
-      int ret;
       try{
         lp = GLPK.glp_create_prob();
         System.out.println("Problem created");
         GLPK.glp_set_prob_name(lp, "myProblem");
-        double objective = 0;
-        while(objective < 1){
-          for(Integer j : restrictedRows)
-            b[j]++;
-          
-          GLPK.glp_add_cols(lp, size);
-          for(int i = 1; i <= size; i ++){
-            GLPK.glp_set_col_name(lp, i, "x" + i);
-            GLPK.glp_set_col_kind(lp, i, GLPKConstants.GLP_BV);
-            GLPK.glp_set_col_bnds(lp, 1, GLPKConstants.GLP_BV, 0, 1);
-          }
-          
-          ind = GLPK.new_intArray(size);
-          val = GLPK.new_doubleArray(size);
-          
-          GLPK.glp_add_rows(lp, 2*patternLength*size);
-          double[] homeConstraintCoeff = new double[size];
-          double[] awayConstraintCoeff = new double[size];
-          
-          for(int i = 0; i < patternLength; i++){
-            for(int j = 0; j < size; j++){
-              homeConstraintCoeff[j] = h[j][i];
-              awayConstraintCoeff[j] = a[j][i];
-            }
-            
-            //add terms
-            GLPK.glp_set_row_name(lp, 1, "homeC1");
-            GLPK.glp_set_row_bnds(lp, 1, GLPKConstants.GLP_FX, 4, 4);
-            GLPK.intArray_setitem(ind, 1, 1);
-            GLPK.intArray_setitem(ind, 2, 2);
-            GLPK.doubleArray_setitem(val, 1, 1.);
-            GLPK.doubleArray_setitem(val, 2, -.5);
-            GLPK.glp_set_mat_row(lp, 1, 2, ind, val);
-          }
-          
-          
-        }
-      }
+        GLPK.glp_set_obj_dir(lp, GLPK.GLP_MIN);
+        GLPK.glp_add_rows(lp, 2 * patternLength + 1);
+        
+        //Setting the names and bounds for each constraint
+        for (int i = 1 ; i <= patternLength; i++)
+        {
+        	GLPK.glp_set_row_name(lp, i, "H"+i);
+        	GLPK.glp_set_row_bnds(lp, i, GLPK.GLP_FX, 4, 4);
+        	GLPK.glp_set_row_name(lp, i + patternLength, "A"+(i+patternLength));
+        	GLPK.glp_set_row_bnds(lp, i + patternLength, GLPK.GLP_FX, 4, 4);
+        }//for
+       
+        //The last one (based on b)
+       GLPK.glp_set_row_name(lp, 2 * patternLength + 1, "Team Constraints");
+       GLPK.glp_set_row_bnds(lp, 2 * patternLength + 1, GLPK.GLP_FX, 9, 9);
+       
+       
+       GLPK.glp_add_cols(lp, size);
+       
+       //Setting the names and bounds for each equation
+       for (int i = 1 ; i <= size; i++)
+       {
+    	   GLPK.glp_set_col_name(lp, i, "x"+i);
+    	   GLPK.glp_set_col_bnds(lp, i, GLPK.GLP_BV, 0, 1);
+    	   GLPK.glp_set_obj_coef(lp, i, b[i-1]);
+       }//for
+       
+       int total_size = (((2 * patternLength) + 1) * size) + 1 ;
+       SWIGTYPE_p_int ia = GLPK.new_intArray(total_size);
+       SWIGTYPE_p_int ja = GLPK.new_intArray(total_size);
+       SWIGTYPE_p_double ar = GLPK.new_doubleArray(total_size);
+       int count = 1;
+       for (int i = 1; i <= 2 * patternLength + 1 ; i++) {
+    	   for (int j = 1 ; j <= size ; j++)
+    	   {
+    		   ia[i] = i;
+    		   ja[j] = j;
+    		   SWIGTYPE_p_double value = 1 ;
+    		   if ( i <= patternLength )
+    		   {
+    			   value = h[i][j];
+    			   
+    		   }
+    		   else if (i <= 2 * patternLength)
+    		   {
+    			   value = a[i][j];
+    		   }
+    		   ar[count++]=value; 
+    	   }//for
+       }//for
+       
+       GLPK.glp_load_matrix(lp, total_size, ia, ja, ar);
+       GLPK.glp_simplex(lp, null);
+        
+      }//try
       catch(Exception e){
         e.printStackTrace();
       }
