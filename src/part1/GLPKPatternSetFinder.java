@@ -1,11 +1,13 @@
 package part1;
 
 import java.util.ArrayList;
+
 import org.gnu.glpk.GLPK;
 import org.gnu.glpk.GLPKConstants;
 import org.gnu.glpk.GlpkException;
 import org.gnu.glpk.SWIGTYPE_p_double;
 import org.gnu.glpk.SWIGTYPE_p_int;
+import org.gnu.glpk.glp_iocp;
 import org.gnu.glpk.glp_prob;
 import org.gnu.glpk.glp_smcp;
 
@@ -62,55 +64,117 @@ public class GLPKPatternSetFinder
           }
       }//for
       glp_prob lp;
-      glp_smcp parm;
-      SWIGTYPE_p_int ind;
-      SWIGTYPE_p_double val;
-      int ret;
       try{
         lp = GLPK.glp_create_prob();
         System.out.println("Problem created");
         GLPK.glp_set_prob_name(lp, "myProblem");
-        double objective = 0;
-        while(objective < 1){
-          for(Integer j : restrictedRows)
-            b[j]++;
-          
-          GLPK.glp_add_cols(lp, size);
-          for(int i = 1; i <= size; i ++){
-            GLPK.glp_set_col_name(lp, i, "x" + i);
-            GLPK.glp_set_col_kind(lp, i, GLPKConstants.GLP_BV);
-            GLPK.glp_set_col_bnds(lp, 1, GLPKConstants.GLP_BV, 0, 1);
-          }
-          
-          ind = GLPK.new_intArray(size);
-          val = GLPK.new_doubleArray(size);
-          
-          GLPK.glp_add_rows(lp, 2*patternLength*size);
-          double[] homeConstraintCoeff = new double[size];
-          double[] awayConstraintCoeff = new double[size];
-          
-          for(int i = 0; i < patternLength; i++){
-            for(int j = 0; j < size; j++){
-              homeConstraintCoeff[j] = h[j][i];
-              awayConstraintCoeff[j] = a[j][i];
-            }
-            
-            //add terms
-            GLPK.glp_set_row_name(lp, 1, "homeC1");
-            GLPK.glp_set_row_bnds(lp, 1, GLPKConstants.GLP_FX, 4, 4);
-            GLPK.intArray_setitem(ind, 1, 1);
-            GLPK.intArray_setitem(ind, 2, 2);
-            GLPK.doubleArray_setitem(val, 1, 1.);
-            GLPK.doubleArray_setitem(val, 2, -.5);
-            GLPK.glp_set_mat_row(lp, 1, 2, ind, val);
-          }
-          
-          
-        }
-      }
+        GLPK.glp_set_obj_dir(lp, GLPK.GLP_MIN);
+        GLPK.glp_add_rows(lp, 2 * patternLength + 1);
+        
+        //Setting the names and bounds for each constraint
+        for (int i = 1 ; i <= patternLength; i++)
+        {
+        	GLPK.glp_set_row_name(lp, i, "H"+i);
+        	GLPK.glp_set_row_bnds(lp, i, GLPK.GLP_FX, 4, 4);
+        	GLPK.glp_set_row_name(lp, i + patternLength, "A"+(i+patternLength));
+        	GLPK.glp_set_row_bnds(lp, i + patternLength, GLPK.GLP_FX, 4, 4);
+        }//for
+       
+        //The last one (based on b)
+       GLPK.glp_set_row_name(lp, 2 * patternLength + 1, "Team Constraints");
+       GLPK.glp_set_row_bnds(lp, 2 * patternLength + 1, GLPK.GLP_FX, 9, 9);
+       
+       
+       GLPK.glp_add_cols(lp, size);
+       
+       //Setting the names and bounds for each equation
+       for (int i = 1 ; i <= size; i++)
+       {
+    	   GLPK.glp_set_col_name(lp, i, "x"+i);
+    	   GLPK.glp_set_col_bnds(lp, i, GLPK.GLP_DB, 0, 1);
+    	   GLPK.glp_set_obj_coef(lp, i, b[i-1]);
+    	   GLPK.glp_set_col_kind(lp, i, GLPK.GLP_BV);
+       }//for
+       
+       int total_size = (((2 * patternLength) + 1) * size) ;
+       SWIGTYPE_p_int ia = GLPK.new_intArray(total_size);
+       SWIGTYPE_p_int ja = GLPK.new_intArray(total_size);
+       SWIGTYPE_p_double ar = GLPK.new_doubleArray(total_size);
+       int count = 1;
+       int iCount = 1;
+       int jCount = 1;
+       for (int i = 1; i <= 2 * patternLength + 1 ; i++) {
+    	   for (int j = 1 ; j <= size ; j++)
+    	   {
+    		   GLPK.intArray_setitem(ia, iCount++, i);
+    		   GLPK.intArray_setitem(ja, jCount++, j);
+    		   double value = 1 ;
+    		   if ( i <= patternLength )
+    		   {
+    			   
+    			   value = h[j-1][i-1];
+    			   
+    		   }
+    		   else if (i <= 2 * patternLength)
+    		   {
+    			   value = a[j-1][i-patternLength-1];
+    		   }
+    		   GLPK.doubleArray_setitem(ar, count++, value);
+    	   }//for
+       }//for
+       //glp_iocp parm = GLPK.GLP_ON;
+       GLPK.glp_load_matrix(lp, total_size, ia, ja, ar);
+      // GLPK.glp_init_iocp(parm);
+       GLPK.glp_simplex(lp, null);
+       int ret = GLPK.glp_intopt(lp, null);
+        
+    // Retrieve solution
+       if (ret == 0)
+         {
+           write_lp_solution(lp);
+         }
+       else
+         {
+           System.out.println("The problem could not be solved");
+         }
+       // Free memory
+       GLPK.glp_delete_prob(lp);
+      }//try
       catch(Exception e){
         e.printStackTrace();
       }
       return patternSets;
   }
+  
+  /**
+   * write simplex solution
+   * @param lp problem
+   */
+   static void write_lp_solution(glp_prob lp)
+   {
+     int i;
+     int n;
+     String name;
+     double val;
+     name = GLPK.glp_get_obj_name(lp);
+     val = GLPK.glp_get_obj_val(lp);
+     System.out.print(name);
+     System.out.print(" = ");
+     System.out.println(val);
+     n = GLPK.glp_get_num_cols(lp);
+     for (i = 1; i <= n; i++)
+       {
+         name = GLPK.glp_get_col_name(lp, i);
+         val = GLPK.glp_get_col_prim(lp, i);
+         System.out.print(name);
+         System.out.print(" = ");
+         System.out.println(val);
+       }
+   }
+   
+   public static void main(String[] arg)
+   {
+	 //  public static ArrayList<Integer[]> findPatternSet(ArrayList<String> patterns)
+	   findPatternSet(HomeAwayGenerator.makePatterns("HHHHBAAAA"));
+   }
 }
