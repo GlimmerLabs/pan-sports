@@ -156,6 +156,8 @@ public class GLPKPatternSetFinder
      int n;
      String name;
      double val;
+     double dval;
+     int ival;
      name = GLPK.glp_get_obj_name(lp);
      val = GLPK.glp_get_obj_val(lp);
      System.out.print(name);
@@ -165,10 +167,19 @@ public class GLPKPatternSetFinder
      for (i = 1; i <= n; i++)
        {
          name = GLPK.glp_get_col_name(lp, i);
-         val = GLPK.glp_get_col_prim(lp, i);
          System.out.print(name);
          System.out.print(" = ");
-         System.out.println(val);
+         int kind = GLPK.glp_get_col_kind(lp, i);
+         dval = GLPK.glp_mip_col_val(lp, i);
+         if ((kind == GLPK.GLP_BV) || (kind == GLPK.GLP_IV)) {
+        	 System.out.print ("integer ");
+        	 ival = (int) dval;
+        	 System.out.println(ival);
+         }
+         else {
+        	 System.out.print ("other ");
+        	 System.out.println(dval);
+         }
        }
    }
    
