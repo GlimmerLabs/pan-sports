@@ -1,0 +1,6 @@
+Array
+(
+    [0] => yup
+    [1] => okay
+    [2] => this
+)

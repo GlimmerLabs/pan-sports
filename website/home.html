@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Schedules</title>
+<meta charset="UTF-8">
+<title>title</title>
+</head>
+<body>
+
+	<center>
+		<h1>Glimmer Labs Sports Scheduling!</h1>
+	</center>
+
+	<br><br>
+	<p>Start by entering school names: </p>
+        <input type="text" id="input" name="school_name">
+        <button id="send_school" onClick="getSchool()">Enter</button>
+        <ol id="list"></ol>
+        <button onClick="writeSchools()">Done</button>
+        
+
+
+</body>
+<script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+<script>
+
+$("#input").keyup(function(event){
+    if(event.keyCode == 13){
+        $("#send_school").click();
+	$("#input").val("");
+    }
+});
+
+$(document).ready(function(){
+    $('#enter').keypress(function(e){
+      if(e.keyCode==13)
+      $('#send_school').click();
+    });
+});
+
+var schools = document.getElementById('list');
+function getSchool(){
+	var name = document.getElementById('input').value;
+	document.getElementById('input').innerHtml="";
+	var entry = document.createElement('li');
+	entry.appendChild(document.createTextNode(name));
+	schools.appendChild(entry);
+}
+
+function writeSchools(){
+	var php_url = "http://www.cs.grinnell.edu/~knoebber17/scheduling/start.php?schools="	
+	var schools = document.getElementById('list').childNodes;
+	var schoolArray = [];
+	for(var i=0;i<schools.length;i++) {
+		var school = schools[i].innerHTML;
+		schoolArray.push(school);
+	}
+	php_url += JSON.stringify(schoolArray);
+	window.location.href = php_url;
+}
+</script> 
+
+</html>
